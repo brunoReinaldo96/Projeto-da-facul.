@@ -29,60 +29,74 @@ document.getElementById("lightbox").addEventListener("click", () => {
     document.getElementById("lightbox").classList.remove("active");
 });
 
-function getNextTraining(day, time) {
-    const now = new Date();
-    const [hours, minutes] = time.split(":");
-    const nextTraining = new Date();
-
-    nextTraining.setDate(now.getDate() + ((day + 7 - now.getDay()) % 7));
-    nextTraining.setHours(hours, minutes, 0, 0);
-
-    // Se o horário já passou hoje, ajusta para a próxima semana
-    if (nextTraining <= now) {
-        nextTraining.setDate(nextTraining.getDate() + 7);
-    }
-
-    return nextTraining;
-}
-
-function updateCardCountdown(elementId, targetTime) {
-    const now = new Date();
-    const timeDifference = targetTime - now;
-
-    // Calcula o tempo restante
-    const days = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((timeDifference / (1000 * 60 * 60)) % 24);
-    const minutes = Math.floor((timeDifference / (1000 * 60)) % 60);
-    const seconds = Math.floor((timeDifference / 1000) % 60);
-
-    // Encontra o elemento HTML
+function startCountdown(elementId, targetDate) {
     const countdownElement = document.getElementById(elementId);
+    const interval = setInterval(function () {
+        const now = new Date().getTime();
+        const distance = targetDate - now;
 
-    // Atualiza o conteúdo do card
-    if (timeDifference > 0) {
-        countdownElement.textContent = `Faltam ${days}d ${hours}h ${minutes}m ${seconds}s`;
-    } else {
-        countdownElement.textContent = "Treino iniciado! 🌟";
+        if (distance < 0) {
+            clearInterval(interval);
+            countdownElement.innerHTML = "Evento iniciado!";
+        } else {
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor(
+                (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+            );
+            const minutes = Math.floor(
+                (distance % (1000 * 60 * 60)) / (1000 * 60)
+            );
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            countdownElement.innerHTML =
+                days + "d " + hours + "h " + minutes + "m " + seconds + "s ";
+        }
+    }, 1000);
+}
+
+function getNextDayOfWeek(dayOfWeek, hour, minute) {
+    const now = new Date();
+    const resultDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        hour,
+        minute,
+        0,
+        0
+    );
+    const currentDay = now.getDay();
+
+    if (
+        currentDay > dayOfWeek || // já passou o dia
+        (currentDay === dayOfWeek && now > resultDate) // é hoje, mas já passou o horário
+    ) {
+        resultDate.setDate(
+            resultDate.getDate() + ((7 - currentDay + dayOfWeek) % 7 || 7)
+        );
+    } else if (currentDay < dayOfWeek) {
+        resultDate.setDate(resultDate.getDate() + (dayOfWeek - currentDay));
     }
+    // se for hoje e o horário ainda não passou, mantém o dia atual
+    return resultDate;
 }
 
-function updateDynamics() {
-    // Horários dos treinos
-    const trainings = {
-        meninas: getNextTraining(2, "08:30"), // Terça às 8:30
-        adolescentes: getNextTraining(2, "09:30"), // Terça às 9:30
-        adultosTer: getNextTraining(2, "19:00"), // Terça às 19:00
-    };
+// Dias da semana: 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
 
-    // Atualizar contagem para Meninas Pequenas
-    updateCardCountdown("countdown-meninas", trainings.meninas);
+// Crianças
+const tuesdayChildren = getNextDayOfWeek(2, 8, 30); // Terça 08:30
+const saturdayChildren = getNextDayOfWeek(6, 13, 30); // Sábado 13:30
 
-    // Atualizar contagem para Adolescentes
-    updateCardCountdown("countdown-adolescentes", trainings.adolescentes);
+// Adolescentes
+const tuesdayAdolescents = getNextDayOfWeek(2, 9, 30); // Terça 09:30
+const saturdayAdolescents = getNextDayOfWeek(6, 14, 30); // Sábado 14:30
 
-    // Atualizar contagem para Adultos (Terça-feira 19:00)
-    updateCardCountdown("countdown-adultos", trainings.adultosTer);
-}
+// Adultos
+const tuesdayAdults = getNextDayOfWeek(2, 19, 0); // Terça 19:00
 
-// Atualiza a contagem a cada segundo
-setInterval(updateDynamics, 1000);
+// Iniciar contadores
+startCountdown("countdown-meninas", tuesdayChildren);
+startCountdown("countdown-meninas-sab", saturdayChildren);
+startCountdown("countdown-adolescentes", tuesdayAdolescents);
+startCountdown("countdown-adolescentes-sab", saturdayAdolescents);
+startCountdown("countdown-adultos", tuesdayAdults);
